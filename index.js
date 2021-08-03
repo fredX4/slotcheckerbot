@@ -41,13 +41,13 @@ app.post(URI, async (req, res) => {
             if (cmd === '/start') {
                 const reply = {
                     chat_id: message.chat.id,
-                    text: 'Hi @' + message.chat.username + ', Hope you\'re ready to get vaccinated! Let\'s find you a free slot. To search for a slot, type the command /search and enter your PIN Code. Type /help if you have additional queries!'
+                    text: 'Hi @' + message.chat.username + ', Hope you\'re ready to get vaccinated! Let\'s find you a free slot. To search for a slot, type the command /search along with your PIN Code. Type /help for more information.'
                 };
                 await axios.post(`${TELEGRAM_API}/sendMessage`, reply);
             } else if (cmd === '/help') {
                 const reply = {
                     chat_id: message.chat.id,
-                    text: 'For checking free slots, type /search and enter your PIN Code'
+                    text: 'For checking free slots, type /search along with your PIN Code (e.g: /search 123456)'
                 };
                 await axios.post(`${TELEGRAM_API}/sendMessage`, reply);
             } else if (cmd === '/search') {
@@ -79,7 +79,7 @@ app.post(URI, async (req, res) => {
                             sessions = center.sessions;
                             sessions.forEach(session => {
                                 if (session.available_capacity) {
-                                    sParsedText += `Date: *${session.date.replaceAll('-','\\-')}*\nVaccine: *${session.vaccine}*\nCentre Name: *${center.name}*\nAge Group: *${session.min_age_limit}\\+*\n`;
+                                    sParsedText += `Date: *${session.date.split('-').join('\\-')}*\nVaccine: *${session.vaccine}*\nCentre Name: *${center.name}*\nAge Group: *${session.min_age_limit}\\+*\n`;
                                     sParsedText += center.fee_type === "Paid" ? `Cost: *₹${center.vaccine_fees.filter(vaccine => vaccine.vaccine === session.vaccine)[0].fee}*\n\n` : `Cost: *Free*\n\n`;
     
                                     if (session.available_capacity_dose1) {
