@@ -56,41 +56,39 @@ app.post(URI, async (req, res) => {
                 if (isNaN(pincode) || pincode.length !== 6) {
                     const reply = {
                         chat_id: message.chat.id,
-                        text: 'Please enter a valid 6 digit PIN Code'
+                        text: 'Please enter a valid PIN Code along with the command (e.g: /search 123456)'
                     };
                     await axios.post(`${TELEGRAM_API}/sendMessage`, reply);
                 } else {
                     //API call to cowin
                     let oDate = new Date();
                     let sDate = (((oDate.getDate() > 9) ? oDate.getDate() : ('0' + oDate.getDate())) + '-' + ((oDate.getMonth() > 8) ? (oDate.getMonth() + 1) : ('0' + (oDate.getMonth() + 1))) + '-' + oDate.getFullYear());
-                    const res = await axios.get(`${COWIN_API}/findByPin?pincode=${pincode}&date=${sDate}`);
+                    const res = await axios.get(`${COWIN_API}/calendarByPin?pincode=${pincode}&date=${sDate}`);
                     
-                    let sessions = res.data.sessions;
-                    if (!sessions.length) {
+                    let centers = res.data.centers;
+                    if (!centers.length) {
                         const reply = {
                             chat_id: message.chat.id,
-                            text: 'Sorry, no slots available for today'
+                            text: 'Sorry, no free centers for the next 7 days'
                         };
                         await axios.post(`${TELEGRAM_API}/sendMessage`, reply);
                     } else {
-                        let sParsedText = '', reply = {};
-                        sessions = sessions.filter(session => {
-                            return session.available_capacity;
-                        });
-
-                        if (sessions.length) {
+                        let sParsedText = '', reply = {}, sessions;
+                        
+                        centers.forEach(center => {
+                            sessions = center.sessions;
                             sessions.forEach(session => {
                                 if (session.available_capacity) {
-                                    sParsedText += `Vaccine: *${session.vaccine}*\nCentre Name: *${session.name}*\nAge Group: *${session.min_age_limit}\\+*\n`;
+                                    sParsedText += `Date: *${session.date.replaceAll('-','\\-')}*\nVaccine: *${session.vaccine}*\nCentre Name: *${center.name}*\nAge Group: *${session.min_age_limit}\\+*\n`;
+                                    sParsedText += center.fee_type === "Paid" ? `Cost: *₹${center.vaccine_fees.filter(vaccine => vaccine.vaccine === session.vaccine)[0].fee}*\n\n` : `Cost: *Free*\n\n`;
     
-                                    sParsedText += parseInt(session.fee) ? `Cost: *₹${session.fee}*\n\n` : `Cost: *Free*\n\n`;
-                                
                                     if (session.available_capacity_dose1) {
                                         sParsedText += `Dose 1 slots: *${session.available_capacity_dose1}*\n`;
                                     }
                                     if (session.available_capacity_dose2) {
                                         sParsedText += `Dose 2 slots: *${session.available_capacity_dose2}*\n`;
                                     }
+    
                                     reply = {
                                         chat_id: message.chat.id,
                                         parse_mode: 'MarkdownV2',
@@ -110,13 +108,7 @@ app.post(URI, async (req, res) => {
                                     sParsedText = '';
                                 }
                             });
-                        } else {
-                            reply = {
-                                chat_id: message.chat.id,
-                                text: 'Sorry, no slots available for today'
-                            };
-                            await axios.post(`${TELEGRAM_API}/sendMessage`, reply);
-                        }
+                        });
                     }
                 }
             } else {
