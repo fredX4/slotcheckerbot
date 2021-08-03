@@ -17,6 +17,10 @@ const init = async () => {
     console.log(res.data);
 };
 
+app.get("/", (req, res) => {
+    res.send('Welcome to the Vaccine Slot Checker Service');
+});
+
 app.post(URI, async (req, res) => {
     if (!(req.body && req.body.message))  return res.send();
     
@@ -70,9 +74,9 @@ app.post(URI, async (req, res) => {
                         if (sessions.length) {
                             sessions.forEach(session => {
                                 if (session.available_capacity) {
-                                    sParsedText += `Vaccine: *${session.vaccine}*\nCentre Name: *${session.name}*\nAge Group: *${session.min_age_limit}*\n`;
+                                    sParsedText += `Vaccine: *${session.vaccine}*\nCentre Name: *${session.name}*\nAge Group: *${session.min_age_limit}\\+*\n`;
     
-                                    sParsedText += parseInt(session.fee) ? `Cost: *₹${session.fee}*\n` : `Cost: *Free*\n`;
+                                    sParsedText += parseInt(session.fee) ? `Cost: *₹${session.fee}*\n\n` : `Cost: *Free*\n\n`;
                                 
                                     if (session.available_capacity_dose1) {
                                         sParsedText += `Dose 1 slots: *${session.available_capacity_dose1}*\n`;
