@@ -13,9 +13,16 @@ const app = express();
 app.use(bodyParser.json());
 
 const init = async () => {
-    const res = await axios.get(`${TELEGRAM_API}/setWebHook?url=${WEBHOOK_URL}`);
+    let res = await axios.get(`${TELEGRAM_API}/deleteWebhook?drop_pending_updates=True`);
+    console.log(res.data);
+    res = await axios.get(`${TELEGRAM_API}/setWebHook?url=${WEBHOOK_URL}`);
     console.log(res.data);
 };
+
+app.get("/resetWebHook", async (req, res) => {
+    await init();
+    res.send(`Webhook reset`);
+});
 
 app.get("/", (req, res) => {
     res.send('Welcome to the Vaccine Slot Checker Service');
