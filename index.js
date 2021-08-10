@@ -20,11 +20,6 @@ const init = async () => {
     console.log(res.data);
 };
 
-app.get("/resetWebHook", async (req, res) => {
-    await init();
-    res.send(`Webhook reset`);
-});
-
 app.get("/", (req, res) => {
     res.send('Welcome to the Vaccine Slot Checker Service');
 });
