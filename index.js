@@ -5,7 +5,8 @@ const axios = require('axios');
 
 const {TOKEN, SERVER_URL} = process.env;
 const TELEGRAM_API = `https://api.telegram.org/bot${TOKEN}`;
-const COWIN_API = 'https://cdn-api.co-vin.in/api/v2/appointment/sessions/public';
+const COWIN_APPOINTMENT_API = 'https://cdn-api.co-vin.in/api/v2/appointment/sessions/public';
+const COWIN_AUTH_API = "https://cdn-api.co-vin.in/api/v2/auth/public"
 const URI = `/webhook/${TOKEN}`;
 const WEBHOOK_URL = SERVER_URL + URI;
 
@@ -63,7 +64,7 @@ app.post(URI, async (req, res) => {
                     //API call to cowin
                     let oDate = new Date();
                     let sDate = (((oDate.getDate() > 9) ? oDate.getDate() : ('0' + oDate.getDate())) + '-' + ((oDate.getMonth() > 8) ? (oDate.getMonth() + 1) : ('0' + (oDate.getMonth() + 1))) + '-' + oDate.getFullYear());
-                    const res = await axios.get(`${COWIN_API}/calendarByPin?pincode=${pincode}&date=${sDate}`);
+                    const res = await axios.get(`${COWIN_APPOINTMENT_API}/calendarByPin?pincode=${pincode}&date=${sDate}`);
                     
                     let centers = res.data.centers;
                     if (!centers.length) {
@@ -73,22 +74,26 @@ app.post(URI, async (req, res) => {
                         };
                         await axios.post(`${TELEGRAM_API}/sendMessage`, reply);
                     } else {
-                        let sParsedText = '', reply = {}, sessions;
-                        
-                        centers.forEach(center => {
-                            sessions = center.sessions;
-                            sessions.forEach(session => {
+                        let sParsedText = '', reply = {};
+
+                        let oPromise = centers.reduce(async (oPromise, center) => {
+                            await oPromise;
+                            let sessions = center.sessions;
+
+                            let oInnerPromise = sessions.reduce(async (oPromise, session) => {
+                                await oPromise;
+
                                 if (session.available_capacity) {
                                     sParsedText += `Date: *${session.date.split('-').join('\\-')}*\nVaccine: *${session.vaccine}*\nCentre Name: *${center.name}*\nAge Group: *${session.min_age_limit}\\+*\n`;
                                     sParsedText += center.fee_type === "Paid" ? `Cost: *₹${center.vaccine_fees.filter(vaccine => vaccine.vaccine === session.vaccine)[0].fee}*\n\n` : `Cost: *Free*\n\n`;
-    
+
                                     if (session.available_capacity_dose1) {
                                         sParsedText += `Dose 1 slots: *${session.available_capacity_dose1}*\n`;
                                     }
                                     if (session.available_capacity_dose2) {
                                         sParsedText += `Dose 2 slots: *${session.available_capacity_dose2}*\n`;
                                     }
-    
+
                                     reply = {
                                         chat_id: message.chat.id,
                                         parse_mode: 'MarkdownV2',
@@ -104,13 +109,22 @@ app.post(URI, async (req, res) => {
                                             ]
                                         }
                                     };
-                                    axios.post(`${TELEGRAM_API}/sendMessage`, reply);
+                                    let data = await axios.post(`${TELEGRAM_API}/sendMessage`, reply);
                                     sParsedText = '';
+                                    return data;
                                 }
-                            });
-                        });
+                            }, Promise.resolve());
+
+                            await oInnerPromise;
+                            sParsedText = '';
+
+                        }, Promise.resolve());
+
+                        await oPromise;
                     }
                 }
+            } else if (cmd === '/download') {
+                //TODO: download certificate code
             } else {
                 const reply = {
                     chat_id: message.chat.id,
